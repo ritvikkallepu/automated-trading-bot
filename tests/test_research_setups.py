@@ -196,6 +196,16 @@ class RankingTests(unittest.TestCase):
         self.assertLess(c["score"], b["score"])
         self.assertAlmostEqual(sum(c["contributions"][k] or 0 for k in c["contributions"]), c["score"], places=2)
 
+    def test_movement_uses_only_closed_candles_at_each_interval(self):
+        for interval in ("5m", "15m"):
+            with self.subTest(interval=interval):
+                market = closed_market({"candles": klines(interval)}, "BTCUSDT", AS_OF, interval)
+                features = public_rank(market, {"status": "unavailable"}, self.cfg)["features"]
+                bars_per_hour = 3_600_000 // market["step_ms"]
+                self.assertAlmostEqual(features["return_pct"], market["features"]["return_pct"])
+                self.assertAlmostEqual(features["hour_change_pct"],
+                                       (market["features"]["close"] / market["features"]["closes"][-bars_per_hour-1] - 1) * 100)
+
     def test_acceleration_uses_same_length_hours_and_no_future_point(self):
         end = AS_OF//STEP*STEP
         raw = {"candles": klines("15m"), "oi": [

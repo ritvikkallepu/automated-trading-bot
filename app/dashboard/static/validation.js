@@ -19,11 +19,11 @@
     const complete=p?.complete||0, gaps=p?.data_gaps||0,pending=p?.pending||0;
     const checked=g?.candidates?.count||0, positive=Math.round((g?.candidates?.positive_rate||0)*checked);
     const timeframe=interval();
-    el('predictionVerdict').textContent=complete<30?`${timeframe} research: not enough evidence yet`:`${timeframe} research milestone reached; reliability not established`;
-    el('predictionOutcomeHeading').textContent=`${timeframe} Research Rank Outcomes`;
-    el('predictionOutcomeDescription').textContent=`Fixed 4-hour price direction check after publication, using stored ${timeframe} Binance candles. Hypothetical costs included; no bot trade fills.`;
-    el('predictionVerdictDetail').textContent=`Qualified research ideas: ${positive} positive out of ${checked} checked after four hours. ${pending} waiting; ${gaps} cannot be verified. ${complete} of 30 observations collected for review. This does not measure Weighted Hybrid trade performance.`;
-    el('predictionMetrics').innerHTML=[['Positive / checked',`${positive} / ${checked}`,`${timeframe} research ideas, 4h price check`],['Unverified',gaps,'missing price evidence'],['Average 4h result',pct(g?.candidates?.mean_net_pct),'qualified research ideas, after costs'],['Other scored pairs',pct(g?.controls?.mean_net_pct),`${number(g?.controls?.count||0,0)} checked; not selected calls`]].map(([k,v,s])=>`<dl><dt>${esc(k)}</dt><dd>${esc(v)}</dd><small>${esc(s)}</small></dl>`).join('');
+    el('predictionVerdict').textContent=complete===0?'No completed qualified checks yet':complete<30?'Too early to judge these research ideas':'Review milestone reached; future results remain uncertain';
+    el('predictionOutcomeHeading').textContent=`Earlier ${timeframe} ideas: four-hour results`;
+    el('predictionOutcomeDescription').textContent=`Each earlier idea is checked against the following four hours of stored Binance prices. Costs are estimated. No real order or Weighted Hybrid trade is included.`;
+    el('predictionVerdictDetail').textContent=`${checked} qualified ideas have a complete four-hour result; ${positive} ended positive after estimated costs. ${pending} are still waiting and ${gaps} could not be verified. This is research evidence, not a trading win rate.`;
+    el('predictionMetrics').innerHTML=[['Completed checks',`${checked} / 30`,'30 is a review milestone, not proof'],['Positive after costs',checked?`${positive} / ${checked}`:'-','Of completed qualified ideas'],['Average four-hour result',pct(g?.candidates?.mean_net_pct),'Hypothetical, after estimated costs'],['Waiting / missing',`${pending} / ${gaps}`,'Excluded from completed results']].map(([k,v,s])=>`<dl><dt>${esc(k)}</dt><dd>${esc(v)}</dd><small>${esc(s)}</small></dl>`).join('');
   }
   async function refresh(){
     if(!active() || !state) return;
@@ -37,15 +37,12 @@
       lastFetch=Date.now();
       page=data.page;
       el('predictionRows').innerHTML=data.items.map(r=>`<tr>
-        <td><strong>${esc(r.pair)}</strong><small>${esc(stamp(r.published_ms))}</small></td>
-        <td>${r.candidate?'Ranked long':'Scored only; not a call'}<small>Score ${number(r.score)} / threshold ${number(r.threshold)}</small></td>
-        <td><span class="prediction-result" data-verdict="${esc(r.verdict)}">${esc(labels[r.verdict])}</span><small>${r.verdict==='data_gap'?'Excluded from success rate':`Window ends ${esc(stamp(r.end_ms))}`}</small></td>
-        <td>${number(r.entry_price,8)} / ${number(r.exit_price,8)}<small>Slippage-adjusted prices</small></td>
-        <td data-verdict="${esc(r.verdict)}">${pct(r.net_return_pct)}</td>
-        <td>${pct(r.mfe_pct)} / ${pct(r.mae_pct)}</td>
-        <td><button type="button" data-prediction="${esc(r.id)}">View outcome</button></td></tr>`).join('')||'<tr><td colspan="7">No observations match these filters</td></tr>';
-      const s=data.summary;
-      el('predictionAuditStatus').textContent=`${data.total} matching records | ${s.positive} positive, ${s.negative} negative, ${s.flat} flat, ${s.pending+s.awaiting_check} waiting, ${s.data_gap} unverified in this cohort | ${data.cohort_counts.candidates} qualified ideas and ${data.cohort_counts.controls} scored-only observations in these settings`;
+        <td data-label="Pair / idea time"><strong>${esc(r.pair)}</strong><small>${esc(stamp(r.published_ms))}</small></td>
+        <td data-label="Research status">${r.candidate?'Qualified research idea':'Scored pair for comparison'}<small>Score ${number(r.score)} / minimum ${number(r.threshold)}</small></td>
+        <td data-label="Four-hour check"><span class="prediction-result" data-verdict="${esc(r.verdict)}">${esc(labels[r.verdict])}</span><small>${r.verdict==='data_gap'?'Not counted as a success':`Check ends ${esc(stamp(r.end_ms))}`}</small></td>
+        <td data-label="Net after costs" data-verdict="${esc(r.verdict)}">${pct(r.net_return_pct)}</td>
+        <td data-label="Evidence"><button type="button" data-prediction="${esc(r.id)}">Details</button></td></tr>`).join('')||'<tr><td colspan="5">No earlier research ideas match these filters</td></tr>';
+      el('predictionAuditStatus').textContent=`${data.total} observations match these filters. These are hypothetical four-hour checks, not bot fills.`;
       el('predictionPage').textContent=`${data.page+1} / ${data.pages}`;
       el('predictionPrevious').disabled=data.page===0;
       el('predictionNext').disabled=data.page+1>=data.pages;
@@ -59,7 +56,7 @@
     el('predictionDetail').hidden=false;
     el('predictionDetail').textContent='Loading frozen evidence...';
     try{
-      const d=await get({sample_id:id}); if(request!==detailEpoch)return;
+      const d=await get({sample_id:id}); if(request!==detailEpoch || !active())return;
       detail=d;const r=d.sample;
       el('predictionDetail').innerHTML=`<div class="predictionDetailHeader"><div><h3>${esc(r.pair)} / ${r.candidate?`${esc(r.interval||'15m')} research rank`:'scored only, not a call'}</h3><p data-verdict="${esc(r.verdict)}"><strong>${esc(labels[r.verdict])}</strong> ${pct(r.net_return_pct)} <span class="subtle">(4h price check, no bot trade)</span></p></div><button type="button" id="predictionDetailClose" aria-label="Close prediction evidence" title="Close prediction evidence">&#215;</button></div>
         <dl><dt>Published</dt><dd>${esc(stamp(r.published_ms))}</dd><dt>Observation window</dt><dd>${esc(stamp(r.first_ms))} to ${esc(stamp(r.end_ms))}</dd><dt>Original score / threshold</dt><dd>${number(r.score)} / ${number(r.threshold)}</dd><dt>Last closed price at scan</dt><dd>${number(d.reference_price,8)}</dd></dl>
@@ -104,10 +101,11 @@
   el('predictionNext').addEventListener('click',()=>{page++;refresh();});
   el('predictionRows').addEventListener('click',e=>{const b=e.target.closest('[data-prediction]');if(b)showDetail(b.dataset.prediction);});
   document.querySelector('[data-research-view=validation]').addEventListener('click',()=>setTimeout(refresh,0));
+  document.querySelectorAll('[data-research-view]:not([data-research-view=validation])').forEach(button=>button.addEventListener('click',hideDetail));
   window.researchValidationView={update(data){
     state=data;
     const select=el('predictionConfig'),selected=pinnedConfig?select.value:data.snapshot?.config_id;
-    const options=(data.validation?.groups||[]).map(g=>`<option value="${esc(g.config_id)}">${g.config_id===data.snapshot?.config_id?'Current settings':esc(g.config_id)}</option>`).join('');
+    const options=(data.validation?.groups||[]).map(g=>`<option value="${esc(g.config_id)}">${g.config_id===data.snapshot?.config_id?'Current settings':`Earlier settings (${esc(g.config_id.slice(0,8))})`}</option>`).join('');
     if(select.innerHTML!==options){select.innerHTML=options;if([...select.options].some(o=>o.value===selected))select.value=selected;}
     overview();
     if(active()&&!fetching&&(lastPublication!==data.snapshot?.id||Date.now()-lastFetch>60000)){

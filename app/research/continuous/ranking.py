@@ -25,6 +25,8 @@ def public_rank(market, oi, cfg):
     distance = (resistance-f["close"])/atr
     spread = (f["ema21"]-f["ema55"])/atr
     extension = (f["close"]-f["ema21"])/atr
+    hour_bars = 3_600_000 // market["step_ms"]
+    hour_change_pct = (f["close"] / f["closes"][-hour_bars-1] - 1) * 100
     scores = {
         "volume": clamp(f["volume_ratio"]/rules["volume_full_ratio"]),
         "trend": clamp(spread/rules["trend_full_atr"]) if f["trend"] == 1 else 0.0,
@@ -44,7 +46,8 @@ def public_rank(market, oi, cfg):
     return {"version": VERSION, "score": round(max(0, sum(v for v in components.values() if v is not None)-penalty), 2),
             "coverage_pct": sum(rules["weights"][k]*100 for k,v in scores.items() if v is not None),
             "contributions": components, "funding_penalty": penalty,
-            "features": {"volume_ratio": f["volume_ratio"], "oi_change_pct": oi.get("oi_change_pct"),
+            "features": {"volume_ratio": f["volume_ratio"], "return_pct": f["return_pct"],
+                         "hour_change_pct": hour_change_pct, "oi_change_pct": oi.get("oi_change_pct"),
                          "oi_acceleration_pp": oi.get("oi_acceleration_pp"), "ema_spread_atr": spread,
                          "compression_ratio": compression, "breakout_distance_atr": distance,
                          "extension_atr": extension},

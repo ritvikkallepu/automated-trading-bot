@@ -221,6 +221,7 @@
       switchMode('research');
       window.researchView?.refresh();
     });
+    if (window.location.hash === '#research') switchMode('research');
 
     function renderStatusBadges(config, botMode) {
       ids.statusRows.innerHTML = '';
