@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CoinDCX Futures Control</title>
   <link rel="stylesheet" href="/static/dashboard.css" />
+  <link rel="stylesheet" href="/static/research.css" />
 </head>
 <body>
   <div class="shell">
@@ -21,6 +22,7 @@
         <button id="tabBacktest" class="modeTab active" type="button">Backtest</button>
         <button id="tabPaper" class="modeTab" type="button">Paper Trading</button>
         <button id="tabLive" class="modeTab" type="button">Live Monitor</button>
+        <button id="tabResearch" class="modeTab" type="button">Research</button>
       </div>
 
       <div id="backtestControls">
@@ -999,10 +1001,186 @@
       </section>
     </div>
 
+    <div id="researchMain" style="display:none">
+      <header class="researchHeading">
+        <div><h2>Market Research</h2><p class="subtle">Binance USDT perpetuals / CoinDCX INR futures</p></div>
+        <span class="researchReadOnly">Observation only</span>
+      </header>
+      <section class="continuousResearch" aria-labelledby="continuousTitle">
+        <div class="researchValidationHeader">
+          <h3 id="continuousTitle">Research Scanner</h3>
+          <div class="researchToolbar">
+            <button type="button" id="continuousStart">Start Research</button>
+            <button type="button" id="continuousStop">Stop Research</button>
+            <button type="button" id="continuousRefresh">Scan Now</button>
+            <button type="button" id="continuousExport" disabled>Export Evidence</button>
+          </div>
+        </div>
+        <p id="continuousStatus" role="status" aria-live="polite">Loading research status</p>
+        <p id="continuousError" class="researchError" hidden></p>
+        <dl id="continuousFreshness" class="researchFreshness"></dl>
+        <p id="continuousHealth" class="subtle" role="status"></p>
+        <nav class="researchTabs" aria-label="Research views">
+          <button type="button" data-research-view="current" aria-pressed="true" aria-controls="researchCurrentPane">Current Watchlist</button>
+          <button type="button" data-research-view="wallets" aria-pressed="false" aria-controls="researchWalletPane">Wallet Evidence</button>
+          <button type="button" data-research-view="history" aria-pressed="false" aria-controls="researchHistoryPane">Setup History</button>
+          <button type="button" data-research-view="validation" aria-pressed="false" aria-controls="researchValidationPane">Research Validation</button>
+          <button type="button" data-research-view="manual" aria-pressed="false" aria-controls="researchManualPane">Manual Scan</button>
+        </nav>
+        <section id="researchCurrentPane" data-research-pane="current" aria-label="Current watchlist">
+        <p id="continuousSnapshotStatus" class="researchSnapshotStatus"></p>
+        <div class="researchStats" id="continuousMetrics"></div>
+        <p id="continuousCoverage" class="subtle"></p>
+        <div class="researchFilters">
+          <label>Pair or sector<input id="continuousSearch" type="search" placeholder="BTC, AI, Layer 2..." /></label>
+          <label>Assessment<select id="continuousTier"><option value="all">All checked pairs</option><option value="watch">Waiting / confirmed</option><option value="avoid">Blocked / extended</option><option value="unscanned">Not checked / excluded</option></select></label>
+          <label>Setup status<select id="continuousTiming"><option value="all">All statuses</option><option value="forming">Waiting / forming</option><option value="trigger_confirmed">Breakout confirmed</option><option value="overextended">Too extended</option><option value="invalidated">Blocked</option></select></label>
+        </div>
+        <div class="researchTableWrap">
+          <table class="researchTable continuousTable">
+            <thead><tr><th>Rank / pair</th><th>Current assessment</th><th>Public score / 100</th><th>Open interest</th><th>Conditional entry / stop</th><th>TP1 / TP2 / TP3</th><th>TP1 R:R</th><th id="continuousCandleHeading">Candle close / time (IST)</th><th>Evidence</th></tr></thead>
+            <tbody id="continuousRows"><tr><td colspan="9">Waiting for first cycle</td></tr></tbody>
+          </table>
+        </div>
+        <section id="continuousEvidence" class="researchEvidence" hidden></section>
+        </section>
+        <section id="researchValidationPane" data-research-pane="validation" hidden aria-label="Validation">
+        <div class="predictionScope" role="note">
+          <strong>Weighted Hybrid trades on 5m / 1m: not measured here</strong>
+          <p>This scanner checks Binance research rankings from closed research candles (currently 5m; earlier 15m settings remain in history). The results below do not replay Weighted Hybrid signals on 5-minute candles or entries and exits on 1-minute candles.</p>
+        </div>
+        <div class="validationVerdict" role="status">
+          <h3 id="predictionVerdict">Checking the evidence</h3>
+          <p id="predictionVerdictDetail" class="subtle"></p>
+        </div>
+        <div id="predictionMetrics" class="predictionMetrics"></div>
+        <h3 id="predictionOutcomeHeading">Research Rank Outcomes</h3>
+        <p id="predictionOutcomeDescription" class="subtle">Fixed 4-hour price direction check after publication, using stored Binance candles. Hypothetical costs included; no bot trade fills.</p>
+        <div class="researchToolbar predictionFilters">
+          <label>Settings<select id="predictionConfig"></select></label>
+          <label>Calls<select id="predictionCohort"><option value="candidates">Qualified ideas</option><option value="controls">Scored only (not calls)</option><option value="all">All observations</option></select></label>
+          <label>Result<select id="predictionOutcome"><option value="all">All results</option><option value="positive">Positive after costs</option><option value="negative">Negative after costs</option><option value="flat">Flat after costs</option><option value="pending">Waiting / awaiting check</option><option value="data_gap">Cannot verify</option></select></label>
+          <label>Pair<input id="predictionSearch" type="search" placeholder="Search pairs" /></label>
+        </div>
+        <p id="predictionAuditStatus" class="subtle" role="status"></p>
+        <p id="predictionAuditError" class="researchError" hidden></p>
+        <div class="researchTableWrap"><table class="researchTable predictionTable"><thead><tr><th>Published (IST) / pair</th><th>Research rank</th><th>4h price check</th><th>Test start / finish</th><th>4h net after costs</th><th>Largest rise / fall</th><th>Review</th></tr></thead><tbody id="predictionRows"><tr><td colspan="7">Loading recorded rankings</td></tr></tbody></table></div>
+        <div class="researchToolbar predictionPaging"><button id="predictionPrevious" type="button" title="Previous results" aria-label="Previous results">&#8592;</button><span id="predictionPage"></span><button id="predictionNext" type="button" title="Next results" aria-label="Next results">&#8594;</button></div>
+        <section id="predictionDetail" class="researchEvidence" hidden aria-label="Prediction evidence"></section>
+        <details class="researchSettings">
+        <summary>Review Milestone</summary>
+        <p id="continuousSampleProgress"></p>
+        <progress id="continuousSampleMeter" max="30" value="0" aria-label="Completed qualified observations"></progress>
+        </details>
+        <details class="researchSettings">
+          <summary>Research Plan Replays</summary>
+          <p id="continuousReplayStatus" class="subtle">No replay results yet</p>
+          <div class="researchTableWrap">
+            <table class="researchTable"><thead><tr><th>Config / tier</th><th>Setups</th><th>Closed entries</th><th>TP1 / TP2 / TP3 hits</th><th>Stop exits</th><th>Public threshold / TP1 hit rate</th><th>Pending / unfilled / gaps</th><th>Avg net / MFE / MAE</th></tr></thead><tbody id="continuousReplayRows"></tbody></table>
+          </div>
+        </details>
+        <details class="researchSettings" id="continuousValidationSection">
+          <summary>Comparison With Other Scored Pairs</summary>
+          <p id="continuousValidationStatus" class="subtle"></p>
+          <div class="researchTableWrap"><table class="researchTable"><thead><tr><th>Config / threshold</th><th>Candidate / control / all samples</th><th>Candidate net</th><th>Control net</th><th>All net</th><th>Candidate minus control</th><th>Candidate MFE / MAE</th><th>Pending / gaps</th></tr></thead><tbody id="continuousValidationRows"></tbody></table></div>
+        </details>
+        <details class="researchSettings">
+          <summary>Score Performance</summary>
+          <div class="researchToolbar"><label>Configuration<select id="continuousScoreConfig"></select></label><label>Grouping<select id="continuousScoreGrouping"><option value="score_bands">Score bands</option><option value="deciles">Deciles (low to high)</option></select></label></div>
+          <p class="subtle">All sampled pairs, including blocked setups. Deciles keep equal scores together; counts may differ. Simulated 4-hour returns after costs, not portfolio PnL.</p>
+          <div class="researchTableWrap"><table class="researchTable"><thead><tr><th>Band</th><th>Score range</th><th>Complete / total</th><th>Mean net</th><th>Median net</th><th>Positive</th><th>Pending / gaps</th></tr></thead><tbody id="continuousScoreRows"></tbody></table></div>
+        </details>
+        <details class="researchSettings">
+          <summary>Collection Health</summary>
+          <p id="continuousStorage" class="subtle"></p>
+          <div class="researchTableWrap"><table class="researchTable"><thead><tr><th>Time (IST)</th><th>Status</th></tr></thead><tbody id="continuousHealthRows"></tbody></table></div>
+        </details>
+        </section>
+        <section id="researchWalletPane" data-research-pane="wallets" hidden aria-label="Wallet evidence">
+          <h3>Cross-Chain Wallet Evidence</h3>
+          <p id="continuousWalletStatus" class="subtle" role="status">Awaiting collector status</p>
+          <div class="researchTableWrap"><table class="researchTable">
+            <thead><tr><th>Network</th><th>Collection</th><th>Watched wallets / assets</th><th>Recorded transfers</th><th>Finalized head / next</th><th>Backlog</th><th>Last check (IST)</th><th>Coverage</th></tr></thead>
+            <tbody id="continuousWalletRows"></tbody>
+          </table></div>
+        </section>
+        <section id="researchHistoryPane" data-research-pane="history" hidden aria-label="Setup history">
+        <details class="researchSettings" id="continuousHistorySection" open>
+          <summary>Setup History</summary>
+          <div class="researchToolbar"><label>Pair<input id="continuousHistorySearch" type="search" placeholder="All pairs" /></label><button id="continuousHistoryExport" type="button">Export History</button><span id="continuousHistoryCount"></span></div>
+          <div class="researchTableWrap"><table class="researchTable"><thead><tr><th>First seen (IST) / pair</th><th>Tracked status / observations</th><th>Original entry / stop</th><th>Original TP1 / TP2 / TP3</th><th>Simulated net return</th><th>MFE / MAE</th><th>Evidence</th></tr></thead><tbody id="continuousHistoryRows"></tbody></table></div>
+          <div class="researchToolbar"><button id="continuousHistoryPrevious" type="button" aria-label="Previous history page" title="Previous history page">&#8592;</button><span id="continuousHistoryPage"></span><button id="continuousHistoryNext" type="button" aria-label="Next history page" title="Next history page">&#8594;</button></div>
+          <pre id="continuousHistoryEvidence" hidden></pre>
+        </details>
+        <details class="researchSettings">
+          <summary>Recent Setup Changes</summary>
+          <div class="researchTableWrap"><table class="researchTable"><thead><tr><th>Time</th><th>Pair</th><th>Change</th><th>Public score</th></tr></thead><tbody id="continuousEventRows"></tbody></table></div>
+          <p id="continuousAlertStatus" class="subtle"></p>
+        </details>
+        </section>
+      </section>
+      <section id="researchManualPane" data-research-pane="manual" hidden aria-label="Manual scan">
+      <h3 class="manualResearchTitle">On-Demand Technical Scan</h3>
+      <div class="researchToolbar">
+        <button id="researchScan" type="button">Scan Markets</button>
+        <button id="researchCancel" type="button" disabled>Cancel Scan</button>
+        <button id="researchDownload" type="button" disabled>Export Snapshot</button>
+        <span id="researchStatus" role="status" aria-live="polite">No scan started</span>
+      </div>
+      <p id="researchError" class="researchError" role="alert" hidden></p>
+      <details class="researchSettings">
+        <summary>Research Filters</summary>
+        <form id="researchSettingsForm"></form>
+      </details>
+      <div class="researchStats">
+        <div><span>Long candidates</span><strong id="researchLongCount">-</strong></div>
+        <div><span>Short candidates</span><strong id="researchShortCount">-</strong></div>
+        <div><span>Avoid / incomplete</span><strong id="researchAvoidCount">-</strong></div>
+        <div><span>CoinDCX verified</span><strong id="researchVerifiedCount">-</strong></div>
+        <div><span>Scan coverage</span><strong id="researchCoverage">-</strong></div>
+      </div>
+      <p id="researchMeta" class="subtle">Heuristic ranking v1 | AI analysis not enabled | No trading permissions</p>
+      <div class="researchFilters">
+        <div class="researchSegments" role="group" aria-label="Research direction">
+          <button type="button" data-bucket="all" aria-pressed="true">All</button>
+          <button type="button" data-bucket="long" aria-pressed="false">Long</button>
+          <button type="button" data-bucket="short" aria-pressed="false">Short</button>
+          <button type="button" data-bucket="avoid" aria-pressed="false">Avoid</button>
+        </div>
+        <label>Pair filter<input id="researchPairFilter" type="search" placeholder="BTC, ETH..." /></label>
+      </div>
+      <div class="researchTableWrap">
+        <table class="researchTable">
+          <thead><tr><th>Pair / 5m closes</th><th>Binance research</th><th>Score / 100</th><th>5m / 15m / 1h / 4h</th><th>5m volume ratio</th><th>CoinDCX check</th><th>Evidence</th></tr></thead>
+          <tbody id="researchRows"><tr><td colspan="7">No research snapshot yet</td></tr></tbody>
+        </table>
+      </div>
+      <section id="researchEvidence" class="researchEvidence" hidden aria-label="Selected pair evidence"></section>
+      <section class="researchValidation" aria-labelledby="researchValidationTitle">
+        <div class="researchValidationHeader">
+          <div><h3 id="researchValidationTitle">Shadow Validation</h3><p class="subtle">Forward Binance outcomes measured after each frozen scan</p></div>
+          <button id="researchOutcomeRefresh" type="button">Check Due Outcomes</button>
+        </div>
+        <p id="researchOutcomeStatus" class="subtle" role="status" aria-live="polite">Waiting for completed scans</p>
+        <p id="researchOutcomeError" class="researchError" role="alert" hidden></p>
+        <div id="researchOutcomeMetrics" class="researchOutcomeMetrics"></div>
+        <div class="researchTableWrap researchOutcomeTableWrap">
+          <table class="researchTable">
+            <thead><tr><th>Signal time</th><th>Outcome time</th><th>Pair</th><th>Direction</th><th>Horizon</th><th>Net return</th><th>MFE</th><th>MAE</th><th>Result</th></tr></thead>
+            <tbody id="researchOutcomeRows"><tr><td colspan="9">No mature outcomes yet</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <details class="researchSettings"><summary id="researchExcludedTitle">Not scanned</summary><ul id="researchExcluded"></ul></details>
+      </section>
+    </div>
     </main>
   </div>
 
   <script src="/static/dashboard.js?v=5"></script>
+  <script src="/static/research.js?v=2"></script>
+  <script src="/static/validation.js?v=1"></script>
+  <script src="/static/continuous.js?v=3"></script>
 </body>
 </html>
 

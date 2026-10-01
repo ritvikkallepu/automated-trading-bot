@@ -197,6 +197,10 @@
     }
 
     function switchMode(mode) {
+      const researchMain = document.getElementById('researchMain');
+      if (researchMain) researchMain.style.display = mode === 'research' ? '' : 'none';
+      const tabResearch = document.getElementById('tabResearch');
+      if (tabResearch) tabResearch.className = 'modeTab' + (mode === 'research' ? ' active' : '');
       document.getElementById('backtestControls').style.display = mode === 'backtest' ? '' : 'none';
       document.getElementById('paperControls').style.display = mode === 'paper' ? '' : 'none';
       document.getElementById('backtestMain').style.display = mode === 'backtest' ? '' : 'none';
@@ -213,6 +217,10 @@
     document.getElementById('tabPaper').addEventListener('click', () => switchMode('paper'));
     const tabLiveBtn = document.getElementById('tabLive');
     if (tabLiveBtn) tabLiveBtn.addEventListener('click', () => switchMode('live'));
+    document.getElementById('tabResearch')?.addEventListener('click', () => {
+      switchMode('research');
+      window.researchView?.refresh();
+    });
 
     function renderStatusBadges(config, botMode) {
       ids.statusRows.innerHTML = '';

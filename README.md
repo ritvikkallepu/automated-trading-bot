@@ -10,6 +10,12 @@ This version is intentionally conservative:
 - Live order, cancel, edit, leverage, and margin-type calls are locked unless both `TRADING_MODE=live` and `LIVE_TRADING_ENABLED=true`.
 - REST signing, public futures market data, private read endpoints, websocket market data, candles, indicators, signal-only strategies, paper risk approval, paper execution, historical backtesting, a local monitoring dashboard, config, logging, rate limiting, and tests are included.
 
+## Research Bot Documentation
+
+The separate research subsystem is documented in [Research Bot: Complete Guide](docs/RESEARCH_BOT_README.md), including setup, all configuration groups, scoring, conditional entries/exits, validation, wallet evidence, alerts, and deployment. Its continuous watchlist is currently **long-only research, not live entry approvals**; the separate manual scanner supports long/short research.
+
+For the measured explanation of Waiting for pullback / Too extended / Blocked assessments, see the [30 September 2026 assessment audit](docs/RESEARCH_ASSESSMENT_AUDIT_2026-09-30.md).
+
 ## Current Phase
 
 Phase 9 builds the local monitoring dashboard.

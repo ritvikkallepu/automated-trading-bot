@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "poll_seconds": 15,
+  "network": {
+    "timeout_seconds": 8,
+    "requests_per_minute": 60,
+    "requests_per_cycle": 60,
+    "max_blocks_per_cycle": 5,
+    "max_storage_mb": 512
+  },
+  "chains": {
+    "ethereum": {
+      "enabled": false,
+      "rpc_url_env": "WALLET_ETH_RPC_URL",
+      "expected_genesis_hash": null,
+      "start_height": null,
+      "wallets": [],
+      "assets": [{"address": "native", "symbol": "ETH", "decimals": 18}]
+    },
+    "bsc": {
+      "enabled": false,
+      "rpc_url_env": "WALLET_BSC_RPC_URL",
+      "expected_genesis_hash": null,
+      "start_height": null,
+      "wallets": [],
+      "assets": [{"address": "native", "symbol": "BNB", "decimals": 18}]
+    },
+    "solana": {
+      "enabled": false,
+      "rpc_url_env": "WALLET_SOL_RPC_URL",
+      "expected_genesis_hash": null,
+      "start_height": null,
+      "wallets": [],
+      "assets": [{"address": "native", "symbol": "SOL", "decimals": 9}]
+    }
+  }
+}

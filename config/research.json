@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "autostart": true,
+  "market_interval": "5m",
+  "schedules": {"market_seconds": 300, "whale_seconds": 3600, "holder_seconds": 21600},
+  "universe": {"min_quote_volume": 1000000, "deep_pairs_per_cycle": 100, "priority_pairs": 50},
+  "network": {"requests_per_minute": 120, "timeout_seconds": 8, "retries": 2, "backoff_seconds": 2, "rate_limit_wait_seconds": 120, "cycle_budget_seconds": 240},
+  "weights": {"whale": 0.4, "oi": 0.4, "holder_safety": 0.2},
+  "ranking": {
+    "weights": {"volume": 0.25, "oi": 0.2, "trend": 0.2, "compression": 0.15, "proximity": 0.2},
+    "volume_full_ratio": 3, "oi_full_pct": 8, "oi_acceleration_full_pp": 2,
+    "trend_full_atr": 2, "compression_full_ratio": 0.5, "breakout_distance_atr": 3,
+    "funding_penalty": 10, "candidate_score": 65
+  },
+  "thresholds": {"high_conviction_score": 70, "whale_usd": 500000, "flow_imbalance": 0.2, "oi_change_pct": 1, "price_change_pct": 0.5, "oi_outlier_pct": 20, "flat_price_pct": 1, "funding_warning_pct": 0.05, "top_cluster_risk_pct": 35, "top_n_clusters": 5},
+  "oi_scores": {"price_up_oi_up": 85, "price_down_oi_up": 15, "price_up_oi_down": 60, "price_down_oi_down": 30, "flat": 50, "funding_penalty": 15},
+  "levels": {"trigger": "pullback", "atr_multiplier": 1.5, "min_stop_atr": 1, "swing_lookback": 20, "min_rr": 1.5, "tp1_r": 1.5, "tp2_r": 2, "tp3_r": 3, "scale_out": [0.5, 0.3, 0.2], "max_extension_atr": 2.5, "trail_atr": 2, "plan_hours": 12, "fee_bps_per_side": 6, "slippage_bps": 4},
+  "laggards": {"min_correlation": 0.65, "min_samples": 40, "leader_return_pct": 5, "min_gap_pct": 3},
+  "sectors": {"BTCUSDT": "Layer 1", "ETHUSDT": "Layer 1", "SOLUSDT": "Layer 1", "AVAXUSDT": "Layer 1", "ARBUSDT": "Layer 2", "OPUSDT": "Layer 2", "STRKUSDT": "Layer 2", "ORDIUSDT": "Ordinals", "SATSUSDT": "Ordinals", "TAOUSDT": "AI", "RENDERUSDT": "AI", "FETUSDT": "AI"},
+  "pair_overrides": {},
+  "assets": {},
+  "providers": {"coinglass_enabled": false, "bubblemaps_enabled": false, "coinglass_min_transfer_usd": 10000000, "coinglass_exchange_labels": ["Binance", "Coinbase", "Kraken", "OKX", "Bybit", "Bitfinex", "KuCoin"]},
+  "alerts": {"telegram_enabled": false, "discord_enabled": false, "cooldown_seconds": 21600}
+}

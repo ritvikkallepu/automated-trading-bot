@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -679,6 +680,11 @@ class DashboardHTTPServer(ThreadingHTTPServer):
         *,
         settings: Settings,
         defaults: DashboardDefaults,
+        research_directory: Path | None = None,
+        outcome_directory: Path | None = None,
+        outcome_autostart: bool = True,
+        continuous_autostart: bool = False,
+        continuous_config: Path | None = None,
     ) -> None:
         import threading
         super().__init__(server_address, DashboardRequestHandler)
@@ -687,6 +693,25 @@ class DashboardHTTPServer(ThreadingHTTPServer):
         self._paper_thread: threading.Thread | None = None
         self._paper_loop: Any = None  # PaperTradingLoop instance
         self._paper_lock = threading.Lock()
+        from app.research.scan_service import ResearchScanService
+        from app.research.outcome_tracker import ResearchOutcomeService
+        self.research = ResearchScanService(research_directory or Path("data/research_scans"))
+        self.research_outcomes = ResearchOutcomeService(
+            self.research.directory,
+            outcome_directory or Path("data/research_outcomes"),
+            autostart=outcome_autostart,
+        )
+        from app.research.continuous.service import ContinuousResearchService
+        self.continuous_research = ContinuousResearchService(
+            self.research.directory.parent / "research" / "research.sqlite3",
+            config_path=continuous_config, autostart=continuous_autostart,
+        )
+
+    def server_close(self) -> None:
+        self.continuous_research.close()
+        self.research_outcomes.close()
+        self.research.close()
+        super().server_close()
 
 
 class DashboardRequestHandler(BaseHTTPRequestHandler):
@@ -702,6 +727,54 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/health":
             self._send_json({"ok": True})
+            return
+        if parsed.path == "/api/research":
+            from dataclasses import asdict
+            from app.research.market_scanner import ScanConfig
+            self._send_json({**self.server.research.status(), "defaults": asdict(ScanConfig())})
+            return
+        if parsed.path == "/api/research/outcomes":
+            self._send_json(self.server.research_outcomes.status())
+            return
+        if parsed.path == "/api/research/continuous":
+            self._send_json(self.server.continuous_research.status())
+            return
+        if parsed.path == "/api/research/continuous/validation":
+            from app.research.continuous.validation_audit import audit_page, audit_detail
+            query = parse_qs(parsed.query)
+            store = self.server.continuous_research.store
+            try:
+                sid = query.get("sample_id", [""])[0]
+                if sid:
+                    if len(sid) > 64:
+                        raise ValueError("Invalid sample id")
+                    value = audit_detail(store, sid)
+                    self._send_json(value or {"error": "Sample not found"}, status=HTTPStatus.OK if value else HTTPStatus.NOT_FOUND)
+                else:
+                    value = audit_page(store, config_id=query.get("config_id", [""])[0],
+                                       cohort=query.get("cohort", ["candidates"])[0],
+                                       outcome=query.get("outcome", ["all"])[0], query=query.get("q", [""])[0],
+                                       page=int(query.get("page", ["0"])[0]))
+                    self._send_json(value)
+            except (ValueError, TypeError):
+                self._send_json({"error": "Invalid validation filters"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path == "/api/research/continuous/history":
+            from app.research.continuous.setups import setup_status
+            store = self.server.continuous_research.store
+            history = setup_status(store)
+            setup_id = parse_qs(parsed.query).get("setup_id", [""])[0]
+            if setup_id:
+                item = next((s for s in history["items"] if s["id"] == setup_id), None)
+                self._send_json({"setup": item, "events": store.setup_events(setup_id)} if item else {"error": "Setup not found"},
+                                status=HTTPStatus.OK if item else HTTPStatus.NOT_FOUND)
+            else:
+                self._send_json({**history, "events": store.setup_events(), "validation": store.validation_results()})
+            return
+        if parsed.path == "/api/research/continuous/evidence":
+            oid = parse_qs(parsed.query).get("id", [""])[0]
+            value = self.server.continuous_research.store.observation(oid) if len(oid) == 32 else None
+            self._send_json(value or {"error": "Evidence not found"}, status=HTTPStatus.OK if value else HTTPStatus.NOT_FOUND)
             return
         if parsed.path == "/api/status":
             self._send_json(
@@ -795,6 +868,35 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path in {"/api/research/continuous/start", "/api/research/continuous/stop", "/api/research/continuous/refresh"}:
+            try:
+                service = self.server.continuous_research
+                action = parsed.path.rsplit("/", 1)[1]
+                {"start": service.start, "stop": lambda: service.close(pause=True), "refresh": service.refresh}[action]()
+                self._send_json(service.status(), status=HTTPStatus.ACCEPTED)
+            except (ValueError, TypeError, OSError, KeyError):
+                self._send_json({"error": "Invalid research configuration; check config/research.json"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path == "/api/research":
+            from app.research.market_scanner import ScanConfig
+            try:
+                if not 0 < int(self.headers.get("Content-Length", "0")) <= 4096:
+                    raise ValueError("Research settings must be a JSON object of at most 4096 bytes")
+                config = ScanConfig.parse(self._read_json_body())
+                self.server.research.start(config)
+            except (ValueError, TypeError, OverflowError) as exc:
+                self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                return
+            self._send_json(self.server.research.status(), status=HTTPStatus.ACCEPTED)
+            return
+        if parsed.path == "/api/research/cancel":
+            self.server.research.cancel()
+            self._send_json({"ok": True})
+            return
+        if parsed.path == "/api/research/outcomes/refresh":
+            self.server.research_outcomes.request_refresh()
+            self._send_json(self.server.research_outcomes.status(), status=HTTPStatus.ACCEPTED)
+            return
         if parsed.path == "/api/kill-switch/enable":
             self._handle_kill_switch_enable()
             return
@@ -1460,7 +1562,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def _send_static_asset(self, asset_name: str) -> None:
-        allowed = {"dashboard.css", "dashboard.js"}
+        allowed = {"dashboard.css", "dashboard.js", "research.css", "research.js", "continuous.js", "validation.js"}
         if asset_name not in allowed:
             self._send_json({"error": "Not found"}, status=HTTPStatus.NOT_FOUND)
             return
@@ -1514,7 +1616,7 @@ def run_dashboard(
     logging.getLogger("app.risk.manager").setLevel(logging.WARNING)
     logging.getLogger("app.broker.paper").setLevel(logging.WARNING)
 
-    server = DashboardHTTPServer((host, port), settings=settings, defaults=defaults)
+    server = DashboardHTTPServer((host, port), settings=settings, defaults=defaults, continuous_autostart=True)
     print(f"Dashboard running at http://{host}:{server.server_port}", flush=True)
     try:
         server.serve_forever()

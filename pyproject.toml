@@ -21,5 +21,8 @@ ws-legacy = [
 where = ["."]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.dashboard.static" = ["*.html", "*.css", "*.js"]
+
 [project.scripts]
 paper = "app.live.run_paper:main"

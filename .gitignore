@@ -32,3 +32,8 @@ build/
 data/coindcx_inr_futures_pairs_cache.json
 data/live_state.json
 data/live_state/
+data/research_scans/
+data/research_outcomes/
+data/research/
+data/research_runtime/
+.test-output/

@@ -28,7 +28,9 @@ class TestDashboardLive(unittest.TestCase):
         self.server = MockServer(self.settings)
         
         # Bypass BaseHTTPRequestHandler init
-        DashboardRequestHandler.__init__ = lambda s, req, client_addr, server: None
+        init_patch = patch.object(DashboardRequestHandler, "__init__", lambda s, req, client_addr, server: None)
+        init_patch.start()
+        self.addCleanup(init_patch.stop)
         self.handler = DashboardRequestHandler(MagicMock(), ("127.0.0.1", 8000), self.server)
         self.handler.server = self.server
         self.handler.path = ""
